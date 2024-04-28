@@ -1,6 +1,5 @@
 import json
 import requests
-import time
 from bs4 import BeautifulSoup
 
 
@@ -9,19 +8,19 @@ URL = 'http://quotes.toscrape.com'
 def main():
     quotes = []
     authors = []
-    next_page = True
-    page_num = 1
-    
-    while next_page:
-        data = requests.get(f'{URL}/page/{page_num}/')
-        
+    link_next_page = '/'
+
+    while True:
+        data = requests.get(URL + link_next_page)
+                
         if data.status_code == 200:
             soup = BeautifulSoup(data.content, 'html.parser')
             data_quotes = soup.find_all('div', class_='quote')
-            
+            data_next_page = soup.find('li', class_='next')
+                        
             for item in data_quotes:
-                quote = item.find('span', class_='text').text
-                author = item.find('small', class_='author').text
+                quote = item.find('span', class_='text').text.strip()
+                author = item.find('small', class_='author').text.strip()
                 author_link = item.find('a')['href']
                 tags = item.find_all('a', class_='tag')
                 tags_list = []
@@ -39,19 +38,17 @@ def main():
                     
                     if author_data.status_code == 200:
                         soup = BeautifulSoup(author_data.content, 'html.parser')
-                        author = soup.find('h3', class_='author-title').text
-                        born_date = soup.find('span', class_='author-born-date').text
-                        born_location = soup.find('span', class_='author-born-location').text
+                        author = soup.find('h3', class_='author-title').text.strip()
+                        born_date = soup.find('span', class_='author-born-date').text.strip()
+                        born_location = soup.find('span', class_='author-born-location').text.strip()
                         description = soup.find('div', class_='author-description').text.strip()
                         author_dict = {'fullname': author,
                                 'born_date': born_date,
                                 'born_location': born_location,
                                 'description': description}
                         authors.append(author_dict)
-
-            if soup.find('li', class_='next'):
-                page_num += 1
-                time.sleep(1)
+            if data_next_page:
+                link_next_page = data_next_page.find('a')['href']
             else:
                 break
     return quotes, authors
